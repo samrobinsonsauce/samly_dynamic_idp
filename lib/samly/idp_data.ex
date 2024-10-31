@@ -13,6 +13,7 @@ defmodule Samly.IdpData do
   defstruct id: "",
             sp_id: "",
             base_url: nil,
+            metadata: nil,
             metadata_file: nil,
             pre_session_create_pipeline: nil,
             use_redirect_for_req: false,
@@ -39,6 +40,7 @@ defmodule Samly.IdpData do
           id: binary(),
           sp_id: binary(),
           base_url: nil | binary(),
+          metadata: nil | binary(),
           metadata_file: nil | binary(),
           pre_session_create_pipeline: nil | module(),
           use_redirect_for_req: boolean(),
@@ -108,7 +110,13 @@ defmodule Samly.IdpData do
   @spec save_idp_config(%IdpData{}, map()) :: %IdpData{}
   defp save_idp_config(idp_data, %{id: id, sp_id: sp_id} = opts_map)
        when is_binary(id) and is_binary(sp_id) do
-    %IdpData{idp_data | id: id, sp_id: sp_id, base_url: Map.get(opts_map, :base_url)}
+    %IdpData{
+      idp_data
+      | id: id,
+        sp_id: sp_id,
+        base_url: Map.get(opts_map, :base_url),
+        metadata: Map.get(opts_map, :metadata)
+    }
     |> set_metadata_file(opts_map)
     |> set_pipeline(opts_map)
     |> set_allowed_target_urls(opts_map)
@@ -128,18 +136,14 @@ defmodule Samly.IdpData do
     else
       {:reading, {:error, reason}} ->
         Logger.error(
-          "[Samly] Failed to read metadata_file [#{inspect(idp_data.metadata_file)}]: #{
-            inspect(reason)
-          }"
+          "[Samly] Failed to read metadata_file [#{inspect(idp_data.metadata_file)}]: #{inspect(reason)}"
         )
 
         idp_data
 
       {:parsing, {:error, reason}} ->
         Logger.error(
-          "[Samly] Invalid metadata_file content [#{inspect(idp_data.metadata_file)}]: #{
-            inspect(reason)
-          }"
+          "[Samly] Invalid metadata_file content [#{inspect(idp_data.metadata_file)}]: #{inspect(reason)}"
         )
 
         idp_data
@@ -214,28 +218,26 @@ defmodule Samly.IdpData do
           to_charlist(format)
 
         :email ->
-          'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+          ~c"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
 
         :x509 ->
-          'urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName'
+          ~c"urn:oasis:names:tc:SAML:1.1:nameid-format:X509SubjectName"
 
         :windows ->
-          'urn:oasis:names:tc:SAML:1.1:nameid-format:WindowsDomainQualifiedName'
+          ~c"urn:oasis:names:tc:SAML:1.1:nameid-format:WindowsDomainQualifiedName"
 
         :krb ->
-          'urn:oasis:names:tc:SAML:2.0:nameid-format:kerberos'
+          ~c"urn:oasis:names:tc:SAML:2.0:nameid-format:kerberos"
 
         :persistent ->
-          'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+          ~c"urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
 
         :transient ->
-          'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+          ~c"urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
 
         invalid_nameid_format ->
           Logger.error(
-            "[Samly] invalid nameid_format [#{inspect(idp_data.metadata_file)}]: #{
-              inspect(invalid_nameid_format)
-            }"
+            "[Samly] invalid nameid_format [#{inspect(idp_data.metadata_file)}]: #{inspect(invalid_nameid_format)}"
           )
 
           idp_data.nameid_format
