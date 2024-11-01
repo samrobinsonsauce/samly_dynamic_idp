@@ -129,23 +129,26 @@ defmodule Samly.IdpData do
   end
 
   @spec load_metadata(%IdpData{}, map()) :: %IdpData{}
-  defp load_metadata(idp_data, _opts_map) do
-    with {:reading, {:ok, raw_xml}} <- {:reading, File.read(idp_data.metadata_file)},
-         {:parsing, {:ok, idp_data}} <- {:parsing, from_xml(raw_xml, idp_data)} do
+  defp load_metadata(%IdpData{metadata: raw_xml} = idp_data, _opts_map) when is_binary(raw_xml) do
+    with {:parsing, {:ok, idp_data}} <- {:parsing, from_xml(raw_xml, idp_data)} do
       idp_data
     else
-      {:reading, {:error, reason}} ->
-        Logger.error(
-          "[Samly] Failed to read metadata_file [#{inspect(idp_data.metadata_file)}]: #{inspect(reason)}"
-        )
-
-        idp_data
-
       {:parsing, {:error, reason}} ->
         Logger.error(
           "[Samly] Invalid metadata_file content [#{inspect(idp_data.metadata_file)}]: #{inspect(reason)}"
         )
 
+        idp_data
+    end
+  end
+
+  @spec load_metadata(%IdpData{}, map()) :: %IdpData{}
+  defp load_metadata(idp_data, opts_map) do
+    with {:reading, {:ok, raw_xml}} <- {:reading, File.read(idp_data.metadata_file)} do
+      %IdpData{idp_data | metadata: raw_xml} |> load_metadata(opts_map)
+    else
+      {:reading, {:error, reason}} ->
+        Logger.error("[Samly] Failed to read metadata_file: #{inspect(reason)}")
         idp_data
     end
   end
@@ -185,6 +188,12 @@ defmodule Samly.IdpData do
   end
 
   @default_metadata_file "idp_metadata.xml"
+
+  @spec set_metadata_file(%IdpData{}, map()) :: %IdpData{}
+  defp set_metadata_file(%IdpData{metadata: metadata} = idp_data, _opts_map)
+       when is_binary(metadata) do
+    %IdpData{idp_data | metadata_file: nil}
+  end
 
   @spec set_metadata_file(%IdpData{}, map()) :: %IdpData{}
   defp set_metadata_file(%IdpData{} = idp_data, %{} = opts_map) do
@@ -428,3 +437,4 @@ defmodule Samly.IdpData do
     |> SweetXml.add_namespace("ds", "http://www.w3.org/2000/09/xmldsig#")
   end
 end
+
