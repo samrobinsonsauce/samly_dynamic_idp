@@ -67,11 +67,11 @@ defmodule Samly.Provider do
 
     service_providers = Samly.SpData.load_providers(opts[:service_providers] || [])
 
-    # identity_providers =
-    #   Samly.IdpData.load_providers(opts[:identity_providers] || [], service_providers)
+    identity_providers =
+      Samly.IdpData.load_providers(opts[:identity_providers] || [], service_providers)
 
     Application.put_env(:samly, :service_providers, service_providers)
-    # Application.put_env(:samly, :identity_providers, identity_providers)
+    Application.put_env(:samly, :identity_providers, identity_providers)
   end
 
   defp opts, do: Application.get_env(:samly, Samly.Provider, [])
