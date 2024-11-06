@@ -44,6 +44,13 @@ defmodule SamlyIdpDataTest do
     metadata_file: "test/data/idp_metadata.xml"
   }
 
+  @idp_config_invalid_xml %{
+    id: "idp3",
+    sp_id: "sp1",
+    base_url: "http://samly.howto:4003/sso",
+    metadata: "<foo> this is <bar> invalid xml </foo>"
+  }
+
   setup context do
     sp_data1 = SpData.load_provider(@sp_config1)
     sp_data2 = SpData.load_provider(@sp_config2)
@@ -66,6 +73,11 @@ defmodule SamlyIdpDataTest do
   test "valid-idp-config-1", %{sps: sps} do
     %IdpData{} = idp_data = IdpData.load_provider(@idp_config1, sps)
     assert idp_data.valid?
+  end
+
+  test "malformed_xml", %{sps: sps} do
+    %IdpData{} = idp_data = IdpData.load_provider(@idp_config_invalid_xml, sps)
+    refute idp_data.valid?
   end
 
   # verify defaults
@@ -248,7 +260,7 @@ defmodule SamlyIdpDataTest do
 
   test "nameid-format-in-metadata-but-not-config-should-use-metadata", %{sps: sps} do
     %IdpData{} = idp_data = IdpData.load_provider(@idp_config1, sps)
-    assert idp_data.nameid_format == 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+    assert idp_data.nameid_format == ~c"urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
   end
 
   test "nameid-format-in-config-but-not-metadata-should-use-config", %{sps: sps} do
@@ -259,7 +271,7 @@ defmodule SamlyIdpDataTest do
       })
 
     %IdpData{} = idp_data = IdpData.load_provider(idp_config, sps)
-    assert idp_data.nameid_format == 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+    assert idp_data.nameid_format == ~c"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
   end
 
   test "nameid-format-in-metadata-and-config-should-use-config", %{sps: sps} do
@@ -269,7 +281,7 @@ defmodule SamlyIdpDataTest do
       })
 
     %IdpData{} = idp_data = IdpData.load_provider(idp_config, sps)
-    assert idp_data.nameid_format == 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+    assert idp_data.nameid_format == ~c"urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
   end
 
   test "nameid-format-in-neither-metadata-nor-config-should-be-unknown", %{sps: sps} do

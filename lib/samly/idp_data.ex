@@ -104,6 +104,7 @@ defmodule Samly.IdpData do
     |> load_metadata(idp_config)
     |> override_nameid_format(idp_config)
     |> update_esaml_recs(service_providers, idp_config)
+    |> xml_ok?()
     |> verify_slo_url()
   end
 
@@ -138,7 +139,7 @@ defmodule Samly.IdpData do
           "[Samly] Invalid metadata_file content [#{inspect(idp_data.metadata_file)}]: #{inspect(reason)}"
         )
 
-        idp_data
+        Map.put(idp_data, :metadata, :invalid)
     end
   end
 
@@ -175,6 +176,15 @@ defmodule Samly.IdpData do
       false
     else
       true
+    end
+  end
+
+  defp xml_ok?(%IdpData{} = idp_data) do
+    if idp_data.metadata == :invalid do
+      idp_data
+      |> Map.put(:valid?, false)
+    else
+      idp_data
     end
   end
 
@@ -262,7 +272,7 @@ defmodule Samly.IdpData do
     if is_boolean(v), do: Map.put(idp_data, attr_name, v), else: idp_data
   end
 
-  @spec from_xml(binary, %IdpData{}) :: {:ok, %IdpData{}}
+  @spec from_xml(binary, %IdpData{}) :: {:ok, %IdpData{}} | {:error, :malformed_metadata}
   def from_xml(metadata_xml, idp_data) when is_binary(metadata_xml) do
     xml_opts = [
       space: :normalize,
@@ -271,7 +281,20 @@ defmodule Samly.IdpData do
       default_attrs: true
     ]
 
-    md_xml = SweetXml.parse(metadata_xml, xml_opts)
+    metadata_response =
+      try do
+        SweetXml.parse(metadata_xml, xml_opts)
+      catch
+        :exit, _ -> {:error, "Failed to parse metadata"}
+      end
+
+    case metadata_response do
+      {:error, _} -> {:error, :malformed_metadata}
+      md_xml -> do_update_idp_with_metadata(idp_data, md_xml)
+    end
+  end
+
+  defp do_update_idp_with_metadata(idp_data, md_xml) do
     signing_certs = get_signing_certs(md_xml)
 
     {:ok,
@@ -437,4 +460,3 @@ defmodule Samly.IdpData do
     |> SweetXml.add_namespace("ds", "http://www.w3.org/2000/09/xmldsig#")
   end
 end
-
