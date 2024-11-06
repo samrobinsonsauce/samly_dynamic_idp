@@ -271,6 +271,8 @@ defmodule Samly.IdpData do
       default_attrs: true
     ]
 
+    IO.inspect(metadata_xml, label: "metadata_xml")
+
     md_xml = SweetXml.parse(metadata_xml, xml_opts)
     signing_certs = get_signing_certs(md_xml)
 
@@ -437,4 +439,3 @@ defmodule Samly.IdpData do
     |> SweetXml.add_namespace("ds", "http://www.w3.org/2000/09/xmldsig#")
   end
 end
-
